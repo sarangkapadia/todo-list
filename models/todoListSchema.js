@@ -12,7 +12,7 @@ const todoUsersSchema = new mongoose.Schema({
     todos: { type: [todoListSchema], required: true }
 }, { timestamps: true });
 
-const todoList = new monogoose.model('TodoList', todoListSchema, 'TodoList');
-const todoUsers = new mongoose.model('TodoUsers', todoUsersSchema, 'TodoUsers');
+const todoList = mongoose.model('TodoList', todoListSchema, 'TodoList');
+const todoUsers = mongoose.model('TodoUsers', todoUsersSchema, 'TodoUsers');
 
 module.exports = { todoList, todoUsers };

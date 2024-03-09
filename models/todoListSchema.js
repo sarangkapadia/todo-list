@@ -2,8 +2,7 @@ const mongoose = require('mongoose');
 
 const todoListSchema = new mongoose.Schema({
     task: { type: String, required: true },
-    status: { type: Boolean, required: true },
-    dueBy: { type: Date, required: true },
+    active: { type: Boolean, required: true },
     priority: { type: Number, required: true }
 }, { timestamps: true });
 
@@ -12,7 +11,7 @@ const todoUsersSchema = new mongoose.Schema({
     todos: { type: [todoListSchema], required: true }
 }, { timestamps: true });
 
-const todoList = mongoose.model('TodoList', todoListSchema, 'TodoList');
+// const todoList = mongoose.model('TodoList', todoListSchema, 'TodoList');
 const todoUsers = mongoose.model('TodoUsers', todoUsersSchema, 'TodoUsers');
 
-module.exports = { todoList, todoUsers };
+module.exports = todoUsers;

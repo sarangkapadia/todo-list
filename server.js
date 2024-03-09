@@ -5,9 +5,7 @@ const port = process.env.PORT || 3000;
 
 // mongoose
 const mongoose = require('mongoose');
-const models = require('./models/todoListSchema');
-const Todo = models.todoList;
-const Users = models.todoUsers;
+const Users = require('./models/todoListSchema');
 
 
 const dbconnect = async () => {
@@ -27,18 +25,34 @@ dbconnect();
 // express Apis
 
 // get all todos for a specific user
-app.get(('/user/:id'), (req, res) => {
-
-    res.send(`In get ${req.params.id}`);
-    // find the user id from the user table
-    // get the array of todo items
-    // return a json response
+app.get(('/user/:id'), async (req, res) => {
+    const query = {
+        username: req.params.id
+    };
+    try {
+        const result = await Users.findOne(query);
+        res.status(200).send(result?.todos);
+    } catch (err) {
+        console.log(err);
+        res.status(400).send(err);
+    }
 });
 
 // add 1 todo for a specific user
-app.post('/user/:id', (req, res) => {
-    console.log(req.body.username);
-    res.status(200).send(`In post user/:id`);
+app.put('/user/:id', async (req, res) => {
+    const query = {
+        username: req.params.id
+    };
+    try {
+        let result = await Users.findOne(query);
+        const todos = [...result.todos, req.body];
+        result.todos = todos;
+        result = await result.save();
+        res.status(200).send(result);
+    } catch (err) {
+        console.log('Error updating record', err);
+        res.status(400).send(err);
+    }
 });
 
 // add a new user
@@ -52,6 +66,8 @@ app.post('/create/user', async (req, res) => {
         }
     } catch (err) {
         console.log("Error searching for document", err);
+        res.status(400).send(err);
+        return;
     }
 
     // Add it to the db if username is unique
@@ -61,10 +77,21 @@ app.post('/create/user', async (req, res) => {
         res.status(200).send(result);
     } catch (err) {
         console.log("Error creating new user", err);
+        res.status(400).send(err);
     }
 
 });
 
+// mark a todo as done ( active: false )
+// app.put('/todo/:id', async (req, res) => {
+//     try {
+//         const result = await Users.findById(req.params.id);
+//         return res.status(200).send(result);
+//     } catch (err) {
+//         console.log(err);
+//         res.status(400).send(err);
+//     }
+// });
 
 app.use((req, res) => {
     res.status(404).send('404! Does not exist');

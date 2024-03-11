@@ -3,10 +3,35 @@ const app = express();
 app.use(express.json());
 const port = process.env.PORT || 3000;
 
+// redis
+const redis = require('redis');
+let redisClient = null;
+
+const redisSetup = async () => {
+
+    redisClient = redis.createClient({
+        password: 'xZNWvUWxSbTswJnpfrfps08t4fC9apv8',
+        socket: {
+            host: 'redis-12500.c331.us-west1-1.gce.cloud.redislabs.com',
+            port: 12500
+        }
+    });
+
+    redisClient.on('error', err => console.log('Redis Client Error', err));
+
+    try {
+        const data = await redisClient.connect();
+        console.log("redisClient connected");
+    } catch (err) {
+        console.log("Failure connecting redis client", err);
+    }
+}
+
+redisSetup();
+
 // mongoose
 const mongoose = require('mongoose');
 const Users = require('./models/todoListSchema');
-
 
 const dbconnect = async () => {
     const databaseName = 'Todo';
@@ -38,11 +63,34 @@ app.get(('/user/:id'), async (req, res) => {
     }
 });
 
+// rate limit algo
+// 3 req / min allowed per user
+const rateLimitExceeded = async (username) => {
+    const requestLimit = 3;
+    const timeWindowInSeconds = 60;
+
+    const count = await redisClient.INCR(username);
+    if (count === 1) {
+        console.log(`expire key:${username} ${count}`);
+        redisClient.EXPIRE(username, timeWindowInSeconds);
+    }
+
+    console.log(username, count);
+    if (count > requestLimit)
+        return true; // 429!
+    return false; // 200
+}
+
 // add 1 todo for a specific user
 app.put('/user/:id', async (req, res) => {
     const query = {
         username: req.params.id
     };
+    const exceeded = await rateLimitExceeded(req.params.id)
+    // decide if the rate limit requirements allow this
+    if (exceeded)
+        return res.status(429).send('Too many requests');
+
     try {
         let result = await Users.findOne(query);
         const todos = [...result.todos, req.body];

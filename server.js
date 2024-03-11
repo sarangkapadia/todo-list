@@ -65,7 +65,7 @@ app.get(('/user/:id'), async (req, res) => {
 
 // rate limit algo
 // 3 req / min allowed per user
-const rateLimitExceeded = async (username) => {
+const fixedWindowLimiter = async (username) => {
     const requestLimit = 3;
     const timeWindowInSeconds = 60;
 
@@ -81,12 +81,37 @@ const rateLimitExceeded = async (username) => {
     return false; // 200
 }
 
+// requirement 3req/min
+// bucket size = 3
+// token refresh time = 1 min
+const maxBucketSize = 3;
+const tokenBucketLimiter = async (username) => {
+    let count = await redisClient.get(username);
+
+    if (count === null) {
+        console.log(`count is null for ${username}`);
+        // first request from user
+        await redisClient.set(username, maxBucketSize);
+        setInterval(async () => {
+            console.log(`${Date.now}In interval for ${username}`);
+            await redisClient.set(username, maxBucketSize);
+            console.log(`Count for ${username} reset to ${await redisClient.get(username)}`);
+        }, 60 * 1000);
+    }
+
+    count = await redisClient.DECR(username);
+    console.log(`Count for ${username} decr to ${count}`)
+    if (count < 0) return true; // 429
+    return false; // 429
+}
+
+
 // add 1 todo for a specific user
 app.put('/user/:id', async (req, res) => {
     const query = {
         username: req.params.id
     };
-    const exceeded = await rateLimitExceeded(req.params.id)
+    const exceeded = await tokenBucketLimiter(req.params.id)
     // decide if the rate limit requirements allow this
     if (exceeded)
         return res.status(429).send('Too many requests');

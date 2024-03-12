@@ -64,10 +64,12 @@ app.get(('/user/:id'), async (req, res) => {
 });
 
 // rate limit algo
+const timeWindowInSeconds = 60;
+const requestLimit = 3;
+
 // 3 req / min allowed per user
 const fixedWindowLimiter = async (username) => {
-    const requestLimit = 3;
-    const timeWindowInSeconds = 60;
+
 
     const count = await redisClient.INCR(username);
     if (count === 1) {
@@ -84,25 +86,33 @@ const fixedWindowLimiter = async (username) => {
 // requirement 3req/min
 // bucket size = 3
 // token refresh time = 1 min
-const maxBucketSize = 3;
+// 1 token per 20s
 const tokenBucketLimiter = async (username) => {
-    let count = await redisClient.get(username);
-
-    if (count === null) {
-        console.log(`count is null for ${username}`);
-        // first request from user
-        await redisClient.set(username, maxBucketSize);
-        setInterval(async () => {
-            console.log(`${Date.now}In interval for ${username}`);
-            await redisClient.set(username, maxBucketSize);
-            console.log(`Count for ${username} reset to ${await redisClient.get(username)}`);
-        }, 60 * 1000);
+    let entry = await redisClient.hGetAll(username);
+    console.log(entry);
+    if (Object.keys(entry).length === 0) {
+        // first entry
+        console.log("New entry");
+        await redisClient.hSet(username, { "token_count": requestLimit, "timestamp": Date.now() })
+        return false; //200
+    } else {
+        const now = Date.now();
+        const numRefills = (now - parseInt(entry.timestamp)) / (20 * 1000);
+        entry.timestamp = now;
+        const newTokenCount = Math.floor(parseInt(entry.token_count) + numRefills);
+        console.log('new token count = ', newTokenCount, numRefills);
+        entry.token_count = Math.min(newTokenCount, requestLimit);
+        console.log(entry, numRefills);
     }
+    if (entry.token_count > 0) {
 
-    count = await redisClient.DECR(username);
-    console.log(`Count for ${username} decr to ${count}`)
-    if (count < 0) return true; // 429
-    return false; // 429
+        entry.token_count--;
+        console.log('now decrement', entry);
+        await redisClient.hSet(username, entry);
+        return false; //200
+    }
+    return true; //429
+
 }
 
 

@@ -51,7 +51,7 @@ Two rate limiting algorithms are implemented:
 
 ## Contributors
 
-- [Your Name](https://github.com/your_username)
+- [Sarang Kapadia](https://github.com/sarangkapadia)
 
 ## License
 

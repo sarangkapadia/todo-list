@@ -12,7 +12,7 @@ This is a RESTful API for managing todo lists, built with Node.js, Express, Mong
 
 ## Installation
 
-1. Clone the repository: `git clone https://github.com/your_username/todo-list-api.git`
+1. Clone the repository
 2. Install dependencies: `npm install`
 3. Set up MongoDB and Redis servers.
 4. Create a `.env` file with the following variables:

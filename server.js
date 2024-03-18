@@ -69,8 +69,6 @@ const requestLimit = 3;
 
 // 3 req / min allowed per user
 const fixedWindowLimiter = async (username) => {
-
-
     const count = await redisClient.INCR(username);
     if (count === 1) {
         console.log(`expire key:${username} ${count}`);
@@ -112,9 +110,12 @@ const tokenBucketLimiter = async (username) => {
         return false; //200
     }
     return true; //429
-
 }
 
+// sliding window log counter
+const slidingWinodwLogCounter = (username) => {
+
+}
 
 // add 1 todo for a specific user
 app.put('/user/:id', async (req, res) => {
